@@ -20,6 +20,12 @@ public class Enemy {
 
     private float attackTimer = 0f;
 
+    private float deathTimer = 0f;
+    private float deathDuration = 0.5f; // half second
+
+    private float hitTimer = 0f;
+    private float hitDuration = 0.15f;
+
     public Enemy(Vector3f spawnPosition) {
         this.position = new Vector3f(spawnPosition);
         this.speed = 2.0f;
@@ -40,6 +46,9 @@ public class Enemy {
         if (!alive)
             return;
 
+        if (hitTimer > 0f) {
+            hitTimer -= deltaTime;
+        }
         Vector3f direction = new Vector3f(playerPosition).sub(position);
         direction.y = 0;
 
@@ -68,14 +77,22 @@ public class Enemy {
                     break;
                 }
             }
+
+            if (!alive) {
+                deathTimer -= deltaTime;
+                return;
+            }
         }
     }
 
     public void damage(int amount) {
         health -= amount;
 
-        if (health <= 0) {
+        hitTimer = hitDuration;
+
+        if (health <= 0 && alive) {
             alive = false;
+            deathTimer = deathDuration;
         }
     }
 
@@ -113,5 +130,13 @@ public class Enemy {
 
             System.out.println("Player hit!");
         }
+    }
+
+    public boolean isRemovable() {
+        return !alive && deathTimer <= 0f;
+    }
+
+    public boolean isHit() {
+        return hitTimer > 0f;
     }
 }

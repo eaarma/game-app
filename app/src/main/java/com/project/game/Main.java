@@ -83,6 +83,8 @@ public class Main {
 
     private float spawnTimer = 0f;
 
+    private int score = 0;
+
     String vertexShader = """
             #version 330 core
             layout (location = 0) in vec3 aPos;
@@ -312,21 +314,30 @@ public class Main {
             // ===== ENEMIES =====
             for (Enemy enemy : enemies) {
 
-                if (!enemy.isAlive())
-                    continue;
-
                 // UPDATE
                 enemy.update(player.getPosition(), deltaTime, obstacles);
                 // ENEMY ATTACK
                 enemy.tryAttack(player, deltaTime);
 
-                // RENDER
+                // SCALE (death effect)
+                float scale = enemy.isAlive() ? 1.0f : 0.6f;
+
                 shader.setMatrix4f("model", new Matrix4f()
-                        .translate(enemy.getPosition().x, enemy.getPosition().y + 0.5f, enemy.getPosition().z));
-                shader.setVector3f("color",
-                        enemy.isAlive()
-                                ? new Vector3f(0.6f, 0.1f, 0.1f)
-                                : new Vector3f(0.2f, 0.2f, 0.2f));
+                        .translate(enemy.getPosition().x, enemy.getPosition().y + 0.5f, enemy.getPosition().z)
+                        .scale(scale));
+
+                // 🎯 COLOR LOGIC (priority matters!)
+                Vector3f color;
+
+                if (!enemy.isAlive()) {
+                    color = new Vector3f(0.2f, 0.2f, 0.2f); // dead
+                } else if (enemy.isHit()) {
+                    color = new Vector3f(1.0f, 1.0f, 1.0f); // FLASH
+                } else {
+                    color = new Vector3f(0.6f, 0.1f, 0.1f); // normal
+                }
+
+                shader.setVector3f("color", color);
 
                 cube.render();
             }
@@ -386,8 +397,14 @@ public class Main {
                 }
 
                 if (hitEnemy != null) {
+                    boolean wasAlive = hitEnemy.isAlive();
+
                     hitEnemy.damage(25);
-                    System.out.println("Enemy hit!");
+
+                    if (wasAlive && !hitEnemy.isAlive()) {
+                        score += 10;
+                        System.out.println("Score: " + score);
+                    }
                 } else if (closestHit != null) {
                     lastHit = closestHit;
                     hitTimer = 0.2f;
@@ -530,8 +547,7 @@ public class Main {
             }
 
             // ===== CLEANUP DEAD ENEMIES =====
-            enemies.removeIf(enemy -> !enemy.isAlive());
-
+            enemies.removeIf(enemy -> enemy.isRemovable());
             // ===== ENEMY SPAWNING =====
             spawnTimer += deltaTime;
 
