@@ -53,6 +53,7 @@ import com.project.game.engine.input.Input;
 import com.project.game.engine.physics.AABB;
 import com.project.game.engine.rendering.CubeMesh;
 import com.project.game.engine.rendering.ShaderProgram;
+import com.project.game.game.enemy.Enemy;
 import com.project.game.game.player.PlayerController;
 
 public class Main {
@@ -77,6 +78,10 @@ public class Main {
 
     private AABB lastHit = null;
     private float hitTimer = 0f;
+
+    private List<Enemy> enemies = new ArrayList<>();
+
+    private float spawnTimer = 0f;
 
     String vertexShader = """
             #version 330 core
@@ -147,6 +152,9 @@ public class Main {
 
         GL.createCapabilities();
         glEnable(GL_DEPTH_TEST);
+
+        enemies.add(new Enemy(new Vector3f(0, -0.75f, -10)));
+        enemies.add(new Enemy(new Vector3f(3, -0.75f, -12)));
 
         shader = new ShaderProgram(vertexShader, fragmentShader);
         cube = new CubeMesh();
@@ -300,6 +308,29 @@ public class Main {
             shader.setVector3f("color",
                     wall == lastHit ? new Vector3f(1, 1, 1) : new Vector3f(0.4f, 0.4f, 0.9f));
             cube.render();
+
+            // ===== ENEMIES =====
+            for (Enemy enemy : enemies) {
+
+                if (!enemy.isAlive())
+                    continue;
+
+                // UPDATE
+                enemy.update(player.getPosition(), deltaTime, obstacles);
+                // ENEMY ATTACK
+                enemy.tryAttack(player, deltaTime);
+
+                // RENDER
+                shader.setMatrix4f("model", new Matrix4f()
+                        .translate(enemy.getPosition().x, enemy.getPosition().y + 0.5f, enemy.getPosition().z));
+                shader.setVector3f("color",
+                        enemy.isAlive()
+                                ? new Vector3f(0.6f, 0.1f, 0.1f)
+                                : new Vector3f(0.2f, 0.2f, 0.2f));
+
+                cube.render();
+            }
+
             // ===== MOUSE LOOK =====
             if (firstMouse) {
                 lastX = currentX;
@@ -327,6 +358,7 @@ public class Main {
                 AABB closestHit = null;
                 float closestDistance = Float.MAX_VALUE;
 
+                // ===== CHECK OBSTACLES =====
                 for (AABB obstacle : obstacles) {
                     Float hit = obstacle.intersectRay(rayOrigin, rayDirection);
 
@@ -336,9 +368,29 @@ public class Main {
                     }
                 }
 
-                if (closestHit != null) {
+                // ===== CHECK ENEMIES =====
+                Enemy hitEnemy = null;
+
+                for (Enemy enemy : enemies) {
+
+                    if (!enemy.isAlive())
+                        continue;
+
+                    Float hit = enemy.getAABB().intersectRay(rayOrigin, rayDirection);
+
+                    if (hit != null && hit > 0 && hit < closestDistance) {
+                        closestDistance = hit;
+                        closestHit = null; // not a world object
+                        hitEnemy = enemy;
+                    }
+                }
+
+                if (hitEnemy != null) {
+                    hitEnemy.damage(25);
+                    System.out.println("Enemy hit!");
+                } else if (closestHit != null) {
                     lastHit = closestHit;
-                    hitTimer = 0.2f; // highlight for 0.2 seconds
+                    hitTimer = 0.2f;
                 }
 
             }
@@ -475,6 +527,21 @@ public class Main {
                 player.setCrouching(true);
             } else {
                 player.setCrouching(false);
+            }
+
+            // ===== CLEANUP DEAD ENEMIES =====
+            enemies.removeIf(enemy -> !enemy.isAlive());
+
+            // ===== ENEMY SPAWNING =====
+            spawnTimer += deltaTime;
+
+            if (spawnTimer >= 3.0f) { // spawn every 3 seconds
+                spawnTimer = 0f;
+
+                float x = (float) (Math.random() * 10 - 5);
+                float z = (float) (Math.random() * -10 - 5);
+
+                enemies.add(new Enemy(new Vector3f(x, 0, z)));
             }
 
             camera.position.set(player.getPosition()).add(0.0f, player.getEyeHeight(), 0.0f);
