@@ -15,6 +15,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_S;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_W;
+import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 import static org.lwjgl.glfw.GLFW.GLFW_RESIZABLE;
 import static org.lwjgl.glfw.GLFW.GLFW_TRUE;
@@ -73,6 +74,9 @@ public class Main {
     private ShaderProgram shader;
     private CubeMesh cube;
     private PlayerController player;
+
+    private AABB lastHit = null;
+    private float hitTimer = 0f;
 
     String vertexShader = """
             #version 330 core
@@ -220,63 +224,82 @@ public class Main {
             shader.setMatrix4f("projection", projection);
             shader.setMatrix4f("view", camera.getViewMatrix());
 
-            // floor
-            Matrix4f floorModel = new Matrix4f()
+            // ===== RENDERING =====
+
+            // floor (index 0)
+            AABB floor = obstacles.get(0);
+            shader.setMatrix4f("model", new Matrix4f()
                     .translate(0.0f, -1.0f, 0.0f)
-                    .scale(20.0f, 0.5f, 20.0f);
+                    .scale(20.0f, 0.5f, 20.0f));
 
-            shader.setMatrix4f("model", floorModel);
-            shader.setVector3f("color", new Vector3f(0.3f, 0.8f, 0.3f)); // green
+            shader.setVector3f("color",
+                    floor == lastHit ? new Vector3f(1, 1, 1) : new Vector3f(0.3f, 0.8f, 0.3f));
             cube.render();
 
-            // cube 1
-            Matrix4f cubeModel = new Matrix4f()
-                    .translate(0.0f, 0.0f, -5.0f);
+            // cube 1 (index 1)
+            AABB cube1 = obstacles.get(1);
+            shader.setMatrix4f("model", new Matrix4f()
+                    .translate(0.0f, 0.0f, -5.0f));
 
-            shader.setMatrix4f("model", cubeModel);
-            shader.setVector3f("color", new Vector3f(0.8f, 0.2f, 0.2f)); // red
+            shader.setVector3f("color",
+                    cube1 == lastHit ? new Vector3f(1, 1, 1) : new Vector3f(0.8f, 0.2f, 0.2f));
             cube.render();
 
-            // cube 2
-            Matrix4f cubeModel2 = new Matrix4f()
-                    .translate(2.0f, 0.0f, -8.0f);
+            // cube 2 (index 2)
+            AABB cube2 = obstacles.get(2);
+            shader.setMatrix4f("model", new Matrix4f()
+                    .translate(2.0f, 0.0f, -8.0f));
 
-            shader.setMatrix4f("model", cubeModel2);
-            shader.setVector3f("color", new Vector3f(0.2f, 0.2f, 0.8f)); // blue
+            shader.setVector3f("color",
+                    cube2 == lastHit ? new Vector3f(1, 1, 1) : new Vector3f(0.2f, 0.2f, 0.8f));
             cube.render();
 
-            // cube 3
-            Matrix4f cubeModel3 = new Matrix4f()
-                    .translate(-3.0f, 1.0f, -10.0f);
+            // cube 3 (index 3)
+            AABB cube3 = obstacles.get(3);
+            shader.setMatrix4f("model", new Matrix4f()
+                    .translate(-3.0f, 1.0f, -10.0f));
 
-            shader.setMatrix4f("model", cubeModel3);
-            shader.setVector3f("color", new Vector3f(0.8f, 0.8f, 0.2f)); // yellow
+            shader.setVector3f("color",
+                    cube3 == lastHit ? new Vector3f(1, 1, 1) : new Vector3f(0.8f, 0.8f, 0.2f));
             cube.render();
 
-            // platform
-            shader.setVector3f("color", new Vector3f(0.4f, 0.9f, 0.4f));
+            // platform (index 4)
+            AABB platform = obstacles.get(4);
             shader.setMatrix4f("model", new Matrix4f()
                     .translate(0.0f, 1.5f, -6.0f)
                     .scale(2.0f, 0.5f, 2.0f));
+
+            shader.setVector3f("color",
+                    platform == lastHit ? new Vector3f(1, 1, 1) : new Vector3f(0.4f, 0.9f, 0.4f));
             cube.render();
 
-            // stepping cubes
-            shader.setVector3f("color", new Vector3f(0.9f, 0.4f, 0.4f));
+            // step 1 (index 5)
+            AABB step1 = obstacles.get(5);
             shader.setMatrix4f("model", new Matrix4f()
                     .translate(-2.0f, 0.0f, -4.0f));
+
+            shader.setVector3f("color",
+                    step1 == lastHit ? new Vector3f(1, 1, 1) : new Vector3f(0.9f, 0.4f, 0.4f));
             cube.render();
 
+            // step 2 (index 6)
+            AABB step2 = obstacles.get(6);
             shader.setMatrix4f("model", new Matrix4f()
                     .translate(-2.0f, 1.0f, -6.0f));
+
+            shader.setVector3f("color",
+                    step2 == lastHit ? new Vector3f(1, 1, 1) : new Vector3f(0.9f, 0.4f, 0.4f));
             cube.render();
 
-            // wall
-            shader.setVector3f("color", new Vector3f(0.4f, 0.4f, 0.9f));
+            // wall (index 7)
+            AABB wall = obstacles.get(7);
             shader.setMatrix4f("model", new Matrix4f()
                     .translate(3.0f, 1.5f, -7.0f)
                     .scale(1.0f, 3.0f, 4.0f));
-            cube.render();
 
+            shader.setVector3f("color",
+                    wall == lastHit ? new Vector3f(1, 1, 1) : new Vector3f(0.4f, 0.4f, 0.9f));
+            cube.render();
             // ===== MOUSE LOOK =====
             if (firstMouse) {
                 lastX = currentX;
@@ -294,6 +317,40 @@ public class Main {
             camera.pitch += yOffset;
 
             camera.pitch = Math.max(-89f, Math.min(89f, camera.pitch));
+
+            // ===== RAYCASTING (left mouse click) =====
+            if (input.isMouseButtonDown(GLFW_MOUSE_BUTTON_LEFT)) {
+
+                Vector3f rayOrigin = new Vector3f(camera.position);
+                Vector3f rayDirection = camera.getFront();
+
+                AABB closestHit = null;
+                float closestDistance = Float.MAX_VALUE;
+
+                for (AABB obstacle : obstacles) {
+                    Float hit = obstacle.intersectRay(rayOrigin, rayDirection);
+
+                    if (hit != null && hit > 0 && hit < closestDistance) {
+                        closestDistance = hit;
+                        closestHit = obstacle;
+                    }
+                }
+
+                if (closestHit != null) {
+                    lastHit = closestHit;
+                    hitTimer = 0.2f; // highlight for 0.2 seconds
+                }
+
+            }
+
+            // ===== HIT TIMER =====
+            if (hitTimer > 0) {
+                hitTimer -= deltaTime;
+
+                if (hitTimer <= 0) {
+                    lastHit = null;
+                }
+            }
 
             // ===== MOVEMENT =====
             Vector3f front = camera.getFront();
@@ -425,6 +482,7 @@ public class Main {
             glfwSwapBuffers(window);
             glfwPollEvents();
         }
+
     }
 
     private void cleanup() {
