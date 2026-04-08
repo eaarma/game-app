@@ -19,6 +19,12 @@ public class PlayerController {
     private float crouchingHeight;
     private float width;
 
+    private int maxHealth;
+    private int health;
+    private boolean alive;
+
+    private Vector3f spawnPoint;
+
     public PlayerController(Vector3f spawnPosition) {
         this.position = new Vector3f(spawnPosition);
         this.velocity = new Vector3f();
@@ -33,6 +39,12 @@ public class PlayerController {
 
         this.standingHeight = 1.8f;
         this.crouchingHeight = 1.0f;
+
+        this.maxHealth = 100;
+        this.health = 100;
+        this.alive = true;
+
+        this.spawnPoint = new Vector3f(spawnPosition);
     }
 
     public Vector3f getPosition() {
@@ -77,6 +89,34 @@ public class PlayerController {
 
     public float getEyeHeight() {
         return crouching ? 0.9f : 1.6f;
+    }
+
+    public int getHealth() {
+        return health;
+    }
+
+    public boolean isAlive() {
+        return alive;
+    }
+
+    public void damage(int amount) {
+        if (!alive)
+            return;
+
+        health -= amount;
+
+        if (health <= 0) {
+            health = 0;
+            alive = false;
+        }
+    }
+
+    public void respawn() {
+        health = maxHealth;
+        alive = true;
+
+        position.set(spawnPoint);
+        velocity.zero();
     }
 
     public AABB getAABB() {

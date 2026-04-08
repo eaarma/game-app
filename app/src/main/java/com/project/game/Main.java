@@ -403,6 +403,16 @@ public class Main {
 
             player.setGrounded(grounded);
 
+            // ===== FALL DEATH =====
+            if (player.getPosition().y < -20.0f && player.isAlive()) {
+                player.damage(100);
+            }
+
+            // ===== RESPAWN =====
+            if (!player.isAlive()) {
+                player.respawn();
+            }
+
             // ===== CROUCH =====
             if (input.isKeyDown(GLFW_KEY_LEFT_CONTROL)) {
                 player.setCrouching(true);
